@@ -26,25 +26,33 @@ def leer_datos():
         return pd.DataFrame(columns=["Numero", "Nombre"])
 
 def guardar_registro(n, nom):
-    df = leer_datos()
-    df["Numero"] = pd.to_numeric(df["Numero"], errors='coerce')
-    df = df.dropna(subset=["Numero"])
-    
-    df = df[df["Numero"].astype(int) != int(n)]
-
-    nuevo = pd.DataFrame([{"Numero": int(n), "Nombre": nom}])
-    df_final = pd.concat([df, nuevo], ignore_index=True)
-
-    # Especificamos la hoja (worksheet) explícitamente
-    conn.update(worksheet="Sorte_Gerson", data=df_final) 
-    st.success(f"✅ ¡Número {n} guardado!")
-except Exception as e:
-    st.error(f"Error al guardar: {e}")
+    try:
+        df = leer_datos()
+        # Limpieza de datos para evitar errores de formato
+        df["Numero"] = pd.to_numeric(df["Numero"], errors='coerce')
+        df = df.dropna(subset=["Numero"])
+        
+        # Filtramos para no duplicar el número
+        df = df[df["Numero"].astype(int) != int(n)]
+        
+        # Agregamos el nuevo registro
+        nuevo = pd.DataFrame([{"Numero": int(n), "Nombre": nom}])
+        df_final = pd.concat([df, nuevo], ignore_index=True)
+        
+        # Guardamos usando el nombre exacto de tu pestaña
+        conn.update(worksheet="Sorteo_Gerson", data=df_final) 
+        st.success(f"✅ ¡Número {n} guardado en la nube!")
+    except Exception as e:
+        st.error(f"Error al guardar: {e}")
 
 def borrar_registro(n):
-    df = leer_datos()
-    df_final = df[df["Numero"].astype(int) != int(n)]
-    conn.update(data=df_final)
+    try:
+        df = leer_datos()
+        df_final = df[df["Numero"].astype(int) != int(n)]
+        conn.update(worksheet="Sorteo_Gerson", data=df_final)
+        st.warning(f"🗑️ Número {n} eliminado.")
+    except Exception as e:
+        st.error(f"Error al borrar: {e}")
 
 # --- 3. ESTILOS CSS COMPLETOS (INTERFAZ CASINO PRO + KEYCAPS) ---
 st.markdown("""
