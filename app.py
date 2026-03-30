@@ -3,7 +3,7 @@ import random
 import time
 import pandas as pd
 
-# --- 1. CONFIGURACIÓN DE PÁGINA (Layout Ancho para Tinka) ---
+# --- 1. CONFIGURACIÓN DE PÁGINA (Layout Ancho) ---
 st.set_page_config(
     page_title="Neo Sorteo: ¡La Suerte no es una opción, el número ganador es tuyo!",
     page_icon="⚓",
@@ -11,10 +11,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. ESTILOS CSS COMPLETOS (INTERFAZ TIPO "LA TINKA") ---
+# --- 2. ESTILOS CSS COMPLETOS (INTERFAZ CASINO PRO) ---
 st.markdown("""
     <style>
-    /* 2.1 Fondo de Casino Oscuro Profundo (Tinka base) */
+    /* 2.1 Fondo de Casino Oscuro Profundo (La Tinka style) */
     .stApp {
         background: radial-gradient(circle at center, #10151f 0%, #080a10 100%);
         color: #e6edf3 !important;
@@ -32,35 +32,33 @@ st.markdown("""
         border-right: 2px solid #3498db;
     }
 
-    /* 2.4 Panel de Sorteo (Grilla de Números estilo Tinka) */
-    .numero-celda {
-        display: inline-block;
-        width: 55px; 
-        height: 55px;
-        line-height: 55px;
-        margin: 5px;
-        border-radius: 50%;
-        text-align: center;
-        font-weight: bold;
-        font-size: 1.3rem;
-        transition: 0.3s;
-        cursor: pointer;
+    /* 2.4 Panel de Sorteo (BOLILLAS DE BINGO CIRCULARES) */
+    div[data-testid="stHorizontalBlock"] button {
+        border-radius: 50% !important;
+        width: 60px !important;
+        height: 60px !important;
+        font-weight: bold !important;
+        font-size: 1.4rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: 0.3s !important;
+        box-shadow: 2px 4px 10px rgba(0,0,0,0.5) !important;
+    }
+
+    /* Bolilla OCUPADA (Roja Neón) */
+    div[data-testid="stHorizontalBlock"] button[kind="primary"] {
+        background-color: #f12c3c !important;
+        color: white !important;
+        border: 2px solid white !important;
+        box-shadow: 0 0 15px rgba(241, 44, 60, 0.7) !important;
     }
     
-    /* Estado Ocupado: Color Tinka (Rojo/Naranja Neón) */
-    .ocupado {
-        background-color: #f12c3c;
-        color: white;
-        box-shadow: 0 0 15px rgba(241, 44, 60, 0.7);
-        border: 2px solid white;
-    }
-    
-    /* Estado Disponible: Color Tinka (Azul Marino Profundo) */
-    .disponible {
-        background-color: #1a233a;
-        color: #3498db;
-        border: 1px solid #3498db;
-        opacity: 0.8;
+    /* Bolilla DISPONIBLE (Blanca Bingo) */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        background-color: #ffffff !important;
+        color: #1a233a !important;
+        border: 2px solid #3498db !important;
     }
 
     /* 2.5 Botones de Acción (Tipo Casino) */
@@ -92,16 +90,28 @@ st.markdown("""
     }
     .celebracion-ganador h1 { color: #f1c40f !important; margin: 0; font-size: 60px; }
     .celebracion-ganador h2 { color: white !important; margin: 10px 0; }
+    
+    /* 2.7 CSS para posicionar el tercer GIF en la superior derecha (FIXED) */
+    .gif-superior-derecha {
+        position: fixed;
+        top: 60px;
+        right: 20px;
+        width: 110px;
+        z-index: 1000;
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(52, 152, 219, 0.6);
+        border: 1px solid #3498db;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 3. INICIALIZACIÓN DE VARIABLES DE SESIÓN (PERSISTENCIA) ---
 if 'amigos' not in st.session_state:
-    st.session_state.amigos = {} # {numero: nombre}
+    st.session_state.amigos = {} 
 if 'historial' not in st.session_state:
-    st.session_state.historial = [] # Lista de ganadores
+    st.session_state.historial = [] 
 if 'editando_num' not in st.session_state:
-    st.session_state.editando_num = None # Para saber qué número estamos modificando
+    st.session_state.editando_num = None 
 
 # --- 4. FUNCIONES DE APOYO (DATOS Y AUDIO) ---
 def guardar_amigo(n, nom):
@@ -120,14 +130,12 @@ def reproducir_audio(url):
         </audio>
         """, unsafe_allow_html=True)
 
-# --- 5. SIDEBAR: PANEL DE CONTROL (RESTAURADO TEXTOS Y GIF) ---
+# --- 5. SIDEBAR: PANEL DE CONTROL (GIF 1) ---
 with st.sidebar:
-    # 5.1 GIF Decorativo (Restaura el anterior para coherencia)
     st.image("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHRkbWRqZ2ZueWZueWZueWZueWZueWZueWZueWZueWZueWZueZ/l41lTfuxV5N97S99e/giphy.gif", width=150)
     st.title("⚓ Panel de Control")
     st.markdown("---")
 
-    # 5.2 Formulario Dinámico (Cambia entre Registro y Edición)
     n_edit = st.session_state.editando_num
     titulo_accion = f"✏️ Editando Número {n_edit}" if n_edit else "📝 Nuevo Registro"
     
@@ -151,7 +159,7 @@ with st.sidebar:
                     st.error("⚠️ Por favor, pon un nombre.")
         
         with c2:
-            if n_edit: # Solo muestra borrar si estamos editando uno existente
+            if n_edit: 
                 if st.form_submit_button("🗑️ Eliminar"):
                     eliminar_amigo(n_edit)
                     st.rerun()
@@ -170,73 +178,79 @@ with st.sidebar:
         st.session_state.editando_num = None
         st.rerun()
 
-# --- 6. PANEL PRINCIPAL: LA GRILLA TIPO "LA TINKA" ---
-# 6.1 Título y eslogan restaurados
+# --- 6. PANEL PRINCIPAL (GIF 3 SUPERIOR DERECHA) ---
+st.markdown("""
+    <img src="https://media.tenor.com/ctw2cS4i4CEAAAAM/lotto-lotto-balls.gif" class="gif-superior-derecha">
+    """, unsafe_allow_html=True)
+
 st.title("🎰 Neo Sorteo: ¡La Suerte la decides tú!")
 st.write("Gestiona tus sorteos con estilo y transparencia.")
 
-# 6.2 Grilla Interactiva (10x5) estilo La Tinka
-st.subheader("📊 Estado de la Tabla (1-50)")
+# 6.3 Grilla Interactiva (10x5) estilo Casino
+st.subheader("📊 Estado de la Tómbola (1-50)")
 for fila in range(5):
     cols = st.columns(10)
     for columna in range(10):
         numero_celda = fila * 10 + columna + 1
         with cols[columna]:
-            # Si el número está registrado, botón ROJO TINKA
             if numero_celda in st.session_state.amigos:
+                # Bolilla ROJA OCUPADA
                 if st.button(f"{numero_celda}", key=f"btn_{numero_celda}", type="primary", 
                              help=f"Amigo: {st.session_state.amigos[numero_celda]}"):
                     st.session_state.editando_num = numero_celda
                     st.rerun()
-            # Si está libre, botón AZUL TINKA
             else:
+                # Bolilla BLANCA DISPONIBLE
                 if st.button(f"{numero_celda}", key=f"btn_{numero_celda}", type="secondary"):
                     st.session_state.editando_num = numero_celda
                     st.rerun()
 
 st.markdown("---")
 
-# --- 7. EL MOMENTO DEL SORTEO (CON SONIDO Y ANIMACIÓN CASINO) ---
+# --- ACTUALIZACIÓN: BOTÓN DE TRANSPARENCIA ---
+with st.expander("👁️ VER LISTA DE PARTICIPANTES (TRANSPARENCIA)"):
+    if st.session_state.amigos:
+        df_trans = pd.DataFrame([
+            {"Número": k, "Nombre": v} 
+            for k, v in sorted(st.session_state.amigos.items())
+        ])
+        st.table(df_trans)
+    else:
+        st.info("No hay registros para mostrar.")
+
+st.markdown("---")
+
+# --- 7. EL MOMENTO DEL SORTEO (GIF 2 CHOCOLATEO Y CELEBRACIÓN) ---
 if len(st.session_state.amigos) > 0:
     st.subheader("🎲 ¡Inicia el Chocolateo!")
     
     if st.button("🔥 ¡GIRAR TÓMBOLA AHORA!", use_container_width=True):
-        
-        # 7.1 Sonido de tómbola/suspenso
         reproducir_audio("https://www.soundjay.com/misc/sounds/bingo-ball-machine-1.mp3")
         
-        # Contenedores vacíos para las animaciones
         espacio_gif = st.empty()
         espacio_numero = st.empty()
         
-        # 7.2 Mostrar GIF de bolillas de lotería mezclándose (Mismo que el sidebar para coherencia Tinka)
-        espacio_gif.image("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHRkbWRqZ2ZueWZueWZueWZueWZueWZueWZueWZueWZueWZueZ/l41lTfuxV5N97S99e/giphy.gif")
+        espacio_gif.image("https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUyZThwb2FvMm94ZHl4MWl0YjZpODIwOW1yNGV0dTM4c2oybzNsbXNmNSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/4RaPld0hPNRXEk1cfv/200w.gif")
         
-        # 7.3 Chocolateo de números aleatorios (Suspenso Gradual)
         lista_participantes = list(st.session_state.amigos.keys())
         for i in range(35):
             n_azar = random.choice(lista_participantes)
-            # El color del número cambia a amarillo al final para dar suspenso
             color_text = "#f1c40f" if i > 25 else "#ffffff"
             espacio_numero.markdown(f"<h1 style='text-align:center; font-size:100px; color:{color_text};'>🎲 {n_azar}</h1>", unsafe_allow_html=True)
-            time.sleep(0.06 + (i/300)) # Se vuelve más lento gradualmente
+            time.sleep(0.06 + (i/300)) 
         
-        # 7.4 Resultado Final
         ganador_final = random.choice(lista_participantes)
         nombre_ganador = st.session_state.amigos[ganador_final]
         
-        # Registrar en historial
         st.session_state.historial.append({"num": ganador_final, "nom": nombre_ganador})
         
-        # 7.5 Limpiar GIF y mostrar celebración de Casino Pro
         espacio_gif.empty()
-        # Sonido de redoble de tambores y victoria (Tinka style)
         reproducir_audio("https://www.myinstants.com/media/sounds/drum-roll-sound-effect.mp3")
         st.balloons()
         
         espacio_numero.markdown(f"""
             <div class="celebracion-ganador">
-                <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHRpbm56amZidGpxbmZueWZueWZueWZueWZueWZueWZueWZueWZueZ/26DOoDHe45G56u2pW/giphy.gif" width="180">
+                <img src="https://media2.giphy.com/media/v1.Y2lkPTZjMDliOTUyZThwb2FvMm94ZHl4MWl0YjZpODIwOW1yNGV0dTM4c2oybzNsbXNmNSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/kfRlTZDvhLCPvOEey8/200w.gif" width="180">
                 <h1 style='font-size: 55px;'>🎉 ¡NÚMERO {ganador_final}! 🎉</h1>
                 <hr style='border-color: rgba(255,255,255,0.2);'>
                 <h2 style='font-size: 35px;'>Felicidades, <b>{nombre_ganador}</b>!</h2>
