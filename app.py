@@ -210,7 +210,7 @@ st.markdown("""
     <img src="https://media.tenor.com/ctw2cS4i4CEAAAAM/lotto-lotto-balls.gif" class="gif-superior-derecha">
     """, unsafe_allow_html=True)
 
-st.title("🎰 Neo Sorteo: ¡La Suerte la decides tú!")
+st.title("🎰 Neo Sorteo: ¡La Suerte no es una opción, el número ganador es tuyo!")
 st.write("Gestiona tus sorteos con estilo y persistencia en la nube.")
 
 # 7.1 Grilla Interactiva (10x5)
