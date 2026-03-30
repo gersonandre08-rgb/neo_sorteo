@@ -4,165 +4,153 @@ import time
 import pandas as pd
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="Neo Sorteo - Edición Gala", layout="wide")
+st.set_page_config(
+    page_title="Neo Sorteo: La Suerte del Callao",
+    page_icon="⚓",
+    layout="wide"
+)
 
-# --- ESTILOS CSS (EL ALMA VISUAL) ---
+# --- ESTILOS CSS (FONDO INTERACTIVO Y GRILLA) ---
 st.markdown("""
     <style>
-    /* Fondo con Gradiente y Animación de Bolillas Flotantes */
+    /* Fondo con Gradiente Radial Profundo */
     .stApp {
         background: radial-gradient(circle at center, #1a1f26 0%, #0a0e14 100%);
     }
 
-    .fondo-bolilla {
-        position: fixed; width: 30px; height: 30px;
-        background: rgba(0, 212, 255, 0.15);
-        border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
-        z-index: -1; animation: flotar 12s infinite linear;
+    /* Animación de Bolillas Flotantes */
+    .bolilla-fondo {
+        position: fixed;
+        width: 40px; 
+        height: 40px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+        z-index: -1;
+        animation: flotar 15s infinite linear;
     }
+
     @keyframes flotar {
-        0% { transform: translateY(110vh) scale(0.5); opacity: 0; }
-        50% { opacity: 0.6; }
-        100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+        from { transform: translateY(110vh); }
+        to { transform: translateY(-10vh); }
     }
 
-    /* Tablero de Números Estilo Tómbola */
-    .numero-box {
-        padding: 10px; border-radius: 50%; text-align: center;
-        margin: 5px; font-weight: bold; width: 50px; height: 50px;
-        line-height: 30px; font-size: 18px; transition: all 0.3s;
-    }
-    .vendido { 
-        background: linear-gradient(135deg, #ff3131, #8b0000); 
-        color: white; border: 2px solid #ffd700; box-shadow: 0px 0px 15px #ff3131;
-    }
-    .libre { 
-        background: rgba(255,255,255,0.05); color: #00d4ff; 
-        border: 1px solid #1a1f26; 
-    }
-
-    /* Efectos de Texto y Bolilla Gigante */
-    .bolilla-show {
-        background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
-        color: black; border-radius: 50%; width: 220px; height: 220px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 110px; font-weight: bold; margin: auto;
-        border: 10px solid white; box-shadow: 0px 0px 60px rgba(255, 215, 0, 0.7);
-    }
-    
-    .msg-animado {
-        font-size: 45px; color: #00ffcc; text-align: center;
-        font-weight: bold; text-shadow: 2px 2px 15px black;
-        margin-top: 30px;
+    /* Estilo de la Grilla de Números */
+    .numero-celda {
+        display: inline-block;
+        width: 60px; 
+        height: 60px;
+        line-height: 60px;
+        margin: 8px;
+        border-radius: 50%;
+        text-align: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+        transition: 0.3s;
     }
 
-    .conteo-regresivo {
-        font-size: 180px; color: #ffffff; text-align: center;
-        font-weight: bold; text-shadow: 0px 0px 30px #ffd700;
+    .ocupado { 
+        background-color: #e74c3c; 
+        color: white; 
+        box-shadow: 0 0 15px rgba(231, 76, 60, 0.6); 
+        border: 2px solid #ff7675;
+    }
+
+    .disponible { 
+        background-color: #2c3e50; 
+        color: #3498db; 
+        border: 1px solid #3498db; 
+        opacity: 0.7;
+    }
+
+    /* Sidebar Estilizado */
+    [data-testid="stSidebar"] {
+        background-color: rgba(15, 23, 42, 0.95) !important;
+        border-right: 1px solid #1e293b;
     }
     </style>
+
+    <div class="bolilla-fondo" style="left:10%; animation-delay:0s;"></div>
+    <div class="bolilla-fondo" style="left:35%; animation-delay:5s; width:20px; height:20px;"></div>
+    <div class="bolilla-fondo" style="left:60%; animation-delay:2s; width:50px; height:50px;"></div>
+    <div class="bolilla-fondo" style="left:85%; animation-delay:8s;"></div>
     """, unsafe_allow_html=True)
 
-# Generar bolillas animadas de fondo
-for i in range(12):
-    st.markdown(f'<div class="fondo-bolilla" style="left:{random.randint(0,95)}vw; animation-delay:{random.randint(0,10)}s;"></div>', unsafe_allow_html=True)
+# --- INICIALIZACIÓN DE DATOS ---
+if 'participantes' not in st.session_state:
+    st.session_state.participantes = {} # Diccionario {numero: nombre}
 
-# --- LÓGICA DE DATOS ---
-if 'db_sorteo' not in st.session_state:
-    st.session_state.db_sorteo = {}
-
-# --- SIDEBAR: GESTIÓN DE PARTICIPANTES ---
+# --- SIDEBAR: PANEL DE CONTROL ---
 with st.sidebar:
-    st.title("⚓ Panel de Control")
-    st.subheader("📝 Registrar Vecino")
+    st.markdown("## ⚓ Panel de Control")
+    st.image("https://cdn-icons-png.flaticon.com/512/5111/5111162.png", width=80)
     
-    with st.form("registro_form", clear_on_submit=True):
-        nombre = st.text_input("Nombre Completo")
-        numero = st.number_input("Número Elegido (1-50)", 1, 50, step=1)
-        if st.form_submit_button("Registrar Número"):
-            if nombre:
-                st.session_state.db_sorteo[numero] = nombre
-                st.success(f"¡Número {numero} asignado!")
-                st.rerun()
-            else:
-                st.warning("Por favor, pon un nombre.")
-
-    st.write("---")
-    st.subheader("📋 Lista de Participantes")
-    if st.session_state.db_sorteo:
-        # Mostrar tabla para control
-        data = [{"#": k, "Nombre": v} for k, v in st.session_state.db_sorteo.items()]
-        df = pd.DataFrame(data).sort_values("#")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+    with st.form("registro_vecino", clear_on_submit=True):
+        st.subheader("📝 Registrar Vecino")
+        nombre_input = st.text_input("Nombre Completo")
+        numero_input = st.number_input("Número Elegido (1-50)", 1, 50, step=1)
+        submit_btn = st.form_submit_button("✅ Registrar Número")
         
-        # Opción para borrar
-        num_a_borrar = st.selectbox("Seleccionar # para borrar:", df["#"])
-        if st.button("❌ Eliminar Registro"):
-            del st.session_state.db_sorteo[num_a_borrar]
-            st.rerun()
-    
-    if st.button("🚨 Reiniciar Todo"):
-        st.session_state.db_sorteo = {}
+        if submit_btn:
+            if not nombre_input:
+                st.error("Por favor, ingresa un nombre.")
+            elif numero_input in st.session_state.participantes:
+                st.error(f"¡El número {numero_input} ya está ocupado!")
+            else:
+                st.session_state.participantes[numero_input] = nombre_input
+                st.success(f"¡Registrado: {nombre_input} en el {numero_input}!")
+
+    st.markdown("---")
+    if st.button("🚨 Reiniciar Sorteo"):
+        st.session_state.participantes = {}
         st.rerun()
 
 # --- CUERPO PRINCIPAL ---
 st.title("🎰 Neo Sorteo: ¡La Suerte del Callao!")
-st.write("Visualización en tiempo real de los números ocupados.")
+st.write("Gestiona tus sorteos con estilo y transparencia.")
 
-# Dibujar Tablero
+# Sección 1: Visualización de Números Ocupados (Grilla 1-50)
+st.subheader("📊 Estado de la Tabla")
 cols = st.columns(10)
-for n in range(1, 51):
-    with cols[(n-1)%10]:
-        clase = "vendido" if n in st.session_state.db_sorteo else "libre"
-        st.markdown(f'<div class="numero-box {clase}">{n}</div>', unsafe_allow_html=True)
+for i in range(1, 51):
+    with cols[(i-1) % 10]:
+        if i in st.session_state.participantes:
+            nombre_v = st.session_state.participantes[i]
+            st.markdown(f'<div class="numero-celda ocupado" title="Dueño: {nombre_v}">{i}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="numero-celda disponible">{i}</div>', unsafe_allow_html=True)
 
-st.write("---")
+st.markdown("---")
 
-# --- PROCESO DE SORTEO ---
-if len(st.session_state.db_sorteo) > 0:
-    if st.button("🔥 ¡INICIAR EL GRAN CHOCOLATEO! 🔥", type="primary", use_container_width=True):
-        area_accion = st.empty()
+# Sección 2: El Sorteo Real
+if st.session_state.participantes:
+    st.subheader("🎲 ¡Inicia el Chocolateo!")
+    if st.button("🔥 ¡GIRAR LA TÓMBOLA!"):
+        placeholder_anim = st.empty()
+        numeros_en_juego = list(st.session_state.participantes.keys())
         
-        # 1. Mensajes de Aliento
-        frases = ["¡VAMOS CALLAO! ⚓", "¡LA SUERTE ESTÁ ECHADA! ✨", "¡CHOCOLATEANDO LAS BOLILLAS! 🍫"]
-        for f in frases:
-            area_accion.markdown(f'<div class="msg-animado">{f}</div>', unsafe_allow_html=True)
-            time.sleep(1.5)
-
-        # 2. Chocolateo Visual (Efecto Tómbola)
-        for _ in range(25):
-            n_fake = random.randint(1, 50)
-            area_accion.markdown(f"""
-                <div style="text-align:center;">
-                    <div class="bolilla-show" style="background: radial-gradient(circle, #00d4ff, #0072ff);">{n_fake}</div>
-                    <h2 style="color:white; margin-top:15px;">¡Buscando al afortunado...!</h2>
-                </div>
-            """, unsafe_allow_html=True)
-            time.sleep(0.1)
-
-        # 3. Cuenta Regresiva
-        for i in ["3", "2", "1"]:
-            area_accion.markdown(f'<div class="conteo-regresivo">{i}</div>', unsafe_allow_html=True)
-            time.sleep(1)
-
-        # 4. Revelación del Ganador Real
-        ganador_num = random.choice(list(st.session_state.db_sorteo.keys()))
-        ganador_nom = st.session_state.db_sorteo[ganador_num]
+        # Efecto de suspenso (2 segundos de giro rápido)
+        for _ in range(30):
+            n_temp = random.choice(numeros_en_juego)
+            placeholder_anim.markdown(f"<h1 style='text-align: center; color: #f1c40f;'>🎲 {n_temp}...</h1>", unsafe_allow_html=True)
+            time.sleep(0.06)
         
-        area_accion.empty()
-        with area_accion.container():
-            st.markdown(f'<div class="bolilla-show">{ganador_num}</div>', unsafe_allow_html=True)
-            time.sleep(0.8)
-            st.markdown(f"""
-                <div style="background:white; color:black; padding:30px; border-radius:25px; 
-                font-size:65px; font-weight:bold; text-align:center; border:8px solid #ffd700; margin-top:25px;">
-                🏆 {ganador_nom} 🏆
-                </div>
-            """, unsafe_allow_html=True)
-            st.balloons()
-            st.snow()
-            
-            # Formato WhatsApp
-            st.write("---")
-            st.info("Copia este mensaje para el grupo:")
-            st.code(f"⚓ *RESULTADO NEO SORTEO* ⚓\n\n🎉 ¡Felicidades {ganador_nom}!\n🔢 Ganaste con el número: {ganador_num}\n\n¡Gracias a todos por participar! 🔥", language="text")
+        # Selección final
+        ganador_n = random.choice(numeros_en_juego)
+        ganador_nom = st.session_state.participantes[ganador_n]
+        
+        st.balloons()
+        placeholder_anim.markdown(f"""
+            <div style="background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); 
+                        padding: 30px; border-radius: 20px; text-align: center; color: black;
+                        box-shadow: 0 10px 30px rgba(241, 196, 15, 0.4);">
+                <h1 style='margin:0;'>🎉 ¡GANADOR: NÚMERO {ganador_n}! 🎉</h1>
+                <hr style='border-color: black;'>
+                <h2 style='margin:10px 0;'>Felicidades, {ganador_nom}</h2>
+            </div>
+        """, unsafe_allow_html=True)
+else:
+    st.info("💡 Comienza registrando vecinos en el panel de la izquierda para activar el sorteo.")
+
+# Pie de página
+st.markdown("---")
+st.caption("Neo Sorteo v2.5 | Callao 2026 | Desarrollado para Gerson")
