@@ -2,6 +2,7 @@ import streamlit as st
 import random
 import time
 import pandas as pd
+from streamlit_gsheets import GSheetsConnection
 
 # --- 1. CONFIGURACIÓN DE PÁGINA (Layout Ancho) ---
 st.set_page_config(
@@ -11,7 +12,32 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. ESTILOS CSS COMPLETOS (INTERFAZ CASINO PRO) ---
+# --- 2. CONEXIÓN A GOOGLE SHEETS (PERSISTENCIA TOTAL) ---
+# Se requiere configurar el link del Excel en los secrets de Streamlit
+conn = st.connection("gsheets", type=GSheetsConnection)
+
+def leer_datos():
+    try:
+        df = conn.read(ttl="1s")
+        if df.empty:
+            return pd.DataFrame(columns=["Numero", "Nombre"])
+        return df
+    except Exception:
+        return pd.DataFrame(columns=["Numero", "Nombre"])
+
+def guardar_registro(n, nom):
+    df = leer_datos()
+    df = df[df["Numero"].astype(int) != int(n)]
+    nuevo = pd.DataFrame([{"Numero": int(n), "Nombre": nom}])
+    df_final = pd.concat([df, nuevo], ignore_index=True)
+    conn.update(data=df_final)
+
+def borrar_registro(n):
+    df = leer_datos()
+    df_final = df[df["Numero"].astype(int) != int(n)]
+    conn.update(data=df_final)
+
+# --- 3. ESTILOS CSS COMPLETOS (INTERFAZ CASINO PRO + KEYCAPS) ---
 st.markdown("""
     <style>
     /* 2.1 Fondo de Casino Oscuro Profundo (La Tinka style) */
@@ -26,7 +52,7 @@ st.markdown("""
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    /* 2.3 Sidebar Estilizado (Tipo Tinka Sidebar) */
+    /* 2.3 Sidebar Estilizado */
     [data-testid="stSidebar"] {
         background-color: #121826 !important;
         border-right: 2px solid #3498db;
@@ -54,46 +80,41 @@ st.markdown("""
         box-shadow: 0 0 15px rgba(241, 44, 60, 0.7) !important;
     }
     
-    /* Bolilla DISPONIBLE (Blanca Bingo - TEXTO CORREGIDO PARA VISIBILIDAD) */
+    /* Bolilla DISPONIBLE (Blanca Bingo) */
     div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
         background-color: #ffffff !important;
-        color: #1a233a !important; /* Azul oscuro profundo para que el número sea legible */
+        color: #1a233a !important;
         border: 2px solid #3498db !important;
     }
 
-    /* 2.5 Botones de Acción y Sidebar (AJUSTE QUIRÚRGICO PARA TEXTO GUARDAR/BORRAR) */
+    /* 2.5 BOTONES DE ACCIÓN - ESTILO TECLA RECTANGULAR (KEYCAP) */
     .stButton>button {
         width: 100%;
-        background-color: #1d4ed8;
-        color: white;
-        border-radius: 12px;
-        border: none;
+        background-color: #1d4ed8 !important;
+        color: white !important;
+        border-radius: 10px !important;
+        border: 1px solid #3498db !important;
+        border-bottom: 6px solid #0c204d !important;
         padding: 12px 24px;
         font-size: 18px;
         font-weight: bold;
-        transition: 0.3s;
+        transition: 0.1s;
     }
 
-    /* Ajuste específico para botones circulares en el Sidebar */
+    /* Efecto al presionar la tecla */
+    .stButton>button:active {
+        border-bottom: 2px solid #0c204d !important;
+        transform: translateY(4px);
+    }
+
+    /* Ajuste específico para botones en el Sidebar (Ahora Rectangulares) */
     section[data-testid="stSidebar"] .stButton>button {
-        border-radius: 50% !important;
-        width: 85px !important; /* Aumentado para que quepa el texto */
-        height: 85px !important;
-        font-size: 0.75rem !important; /* Letra ajustada */
-        padding: 5px !important;
-        line-height: 1.1 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
+        border-radius: 8px !important;
+        font-size: 0.85rem !important;
+        padding: 8px !important;
+        height: auto !important;
     }
 
-    .stButton>button:hover {
-        background-color: #2563eb;
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(37, 99, 235, 0.4);
-    }
-    
     /* 2.6 Bloque de Ganador (Casino Celebration Style) */
     .celebracion-ganador {
         background: linear-gradient(135deg, #1d4ed8 0%, #0c204d 100%);
@@ -106,12 +127,12 @@ st.markdown("""
     .celebracion-ganador h1 { color: #f1c40f !important; margin: 0; font-size: 60px; }
     .celebracion-ganador h2 { color: white !important; margin: 10px 0; }
     
-    /* 2.7 CSS PARA GIF SUPERIOR DERECHA (POSICIÓN Y TAMAÑO CORREGIDOS) */
+    /* 2.7 CSS PARA GIF SUPERIOR DERECHA */
     .gif-superior-derecha {
         position: fixed;
-        top: 100px; /* Bajado para que no lo tape la franja blanca */
+        top: 100px;
         right: 30px;
-        width: 150px; /* Más grande como solicitaste */
+        width: 150px;
         height: auto;
         z-index: 1000;
         border-radius: 15px;
@@ -121,24 +142,13 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. INICIALIZACIÓN DE VARIABLES DE SESIÓN (PERSISTENCIA) ---
-if 'amigos' not in st.session_state:
-    st.session_state.amigos = {} 
+# --- 4. INICIALIZACIÓN DE VARIABLES DE SESIÓN ---
 if 'historial' not in st.session_state:
     st.session_state.historial = [] 
 if 'editando_num' not in st.session_state:
     st.session_state.editando_num = None 
 
-# --- 4. FUNCIONES DE APOYO (DATOS Y AUDIO) ---
-def guardar_amigo(n, nom):
-    st.session_state.amigos[n] = nom
-    st.session_state.editando_num = None
-
-def eliminar_amigo(n):
-    if n in st.session_state.amigos:
-        del st.session_state.amigos[n]
-    st.session_state.editando_num = None
-
+# --- 5. FUNCIONES DE APOYO ---
 def reproducir_audio(url):
     st.markdown(f"""
         <audio autoplay>
@@ -146,12 +156,13 @@ def reproducir_audio(url):
         </audio>
         """, unsafe_allow_html=True)
 
-# --- 5. SIDEBAR: PANEL DE CONTROL (GIF 1) ---
+# Cargar datos desde Google Sheets
+df_nube = leer_datos()
+amigos_dict = dict(zip(df_nube["Numero"].astype(int), df_nube["Nombre"]))
+
+# --- 6. SIDEBAR: PANEL DE CONTROL ---
 with st.sidebar:
-    # --- CAMBIO DE GIF DEL PANEL DE CONTROL ---
-    # Para cambiar este GIF, simplemente reemplaza la URL de abajo.
     st.image("https://media.tenor.com/o8bWC-23Vy4AAAAM/bingo.gif", width=180)
-    
     st.title("⚓ Panel de Control")
     st.markdown("---")
 
@@ -161,28 +172,25 @@ with st.sidebar:
     with st.form("form_gestion", clear_on_submit=True):
         st.subheader(titulo_accion)
         nombre_input = st.text_input("Nombre del Amigo", 
-                                     value=st.session_state.amigos.get(n_edit, "") if n_edit else "")
+                                     value=amigos_dict.get(n_edit, "") if n_edit else "")
         numero_input = st.number_input("Número Elegido", 1, 50, 
                                        value=n_edit if n_edit else 1)
         
         c1, c2 = st.columns(2)
         with c1:
-            # Botón Guardar circular con salto de línea para ajuste
-            if st.form_submit_button("✅\nGUARDAR"):
+            if st.form_submit_button("💾 GUARDAR"):
                 if nombre_input:
-                    if not n_edit and numero_input in st.session_state.amigos:
-                        st.error("⚠️ El número ya está ocupado.")
-                    else:
-                        guardar_amigo(numero_input, nombre_input)
-                        st.rerun()
+                    guardar_registro(numero_input, nombre_input)
+                    st.session_state.editando_num = None
+                    st.rerun()
                 else:
                     st.error("⚠️ Por favor, pon un nombre.")
         
         with c2:
             if n_edit: 
-                # Botón Borrar circular con salto de línea para ajuste
-                if st.form_submit_button("🗑️\nBORRAR"):
-                    eliminar_amigo(n_edit)
+                if st.form_submit_button("🗑️ BORRAR"):
+                    borrar_registro(n_edit)
+                    st.session_state.editando_num = None
                     st.rerun()
 
     st.markdown("---")
@@ -193,47 +201,43 @@ with st.sidebar:
     else:
         st.caption("Aún no hay ganadores.")
 
-    if st.button("🚨 Reiniciar Base de Datos"):
-        st.session_state.amigos = {}
+    if st.button("🚨 Reiniciar Sorteo (Historial)"):
         st.session_state.historial = []
-        st.session_state.editando_num = None
         st.rerun()
 
-# --- 6. PANEL PRINCIPAL (GIF 3 SUPERIOR DERECHA AJUSTADO) ---
+# --- 7. PANEL PRINCIPAL ---
 st.markdown("""
     <img src="https://media.tenor.com/ctw2cS4i4CEAAAAM/lotto-lotto-balls.gif" class="gif-superior-derecha">
     """, unsafe_allow_html=True)
 
 st.title("🎰 Neo Sorteo: ¡La Suerte la decides tú!")
-st.write("Gestiona tus sorteos con estilo y transparencia.")
+st.write("Gestiona tus sorteos con estilo y persistencia en la nube.")
 
-# 6.3 Grilla Interactiva (10x5) estilo Casino
+# 7.1 Grilla Interactiva (10x5)
 st.subheader("📊 Estado de la Tómbola (1-50)")
 for fila in range(5):
     cols = st.columns(10)
     for columna in range(10):
         numero_celda = fila * 10 + columna + 1
         with cols[columna]:
-            if numero_celda in st.session_state.amigos:
-                # Bolilla ROJA OCUPADA
+            if numero_celda in amigos_dict:
                 if st.button(f"{numero_celda}", key=f"btn_{numero_celda}", type="primary", 
-                             help=f"Amigo: {st.session_state.amigos[numero_celda]}"):
+                             help=f"Amigo: {amigos_dict[numero_celda]}"):
                     st.session_state.editando_num = numero_celda
                     st.rerun()
             else:
-                # Bolilla BLANCA DISPONIBLE
                 if st.button(f"{numero_celda}", key=f"btn_{numero_celda}", type="secondary"):
                     st.session_state.editando_num = numero_celda
                     st.rerun()
 
 st.markdown("---")
 
-# --- ACTUALIZACIÓN: BOTÓN DE TRANSPARENCIA ---
+# 7.2 Botón de Transparencia
 with st.expander("👁️ VER LISTA DE PARTICIPANTES (TRANSPARENCIA)"):
-    if st.session_state.amigos:
+    if amigos_dict:
         df_trans = pd.DataFrame([
             {"Número": k, "Nombre": v} 
-            for k, v in sorted(st.session_state.amigos.items())
+            for k, v in sorted(amigos_dict.items())
         ])
         st.table(df_trans)
     else:
@@ -241,44 +245,53 @@ with st.expander("👁️ VER LISTA DE PARTICIPANTES (TRANSPARENCIA)"):
 
 st.markdown("---")
 
-# --- 7. EL MOMENTO DEL SORTEO (GIF 2 CHOCOLATEO Y CELEBRACIÓN) ---
-if len(st.session_state.amigos) > 0:
-    st.subheader("🎲 ¡Inicia el Chocolateo!")
-    
-    if st.button("🔥 ¡GIRAR TÓMBOLA AHORA!", use_container_width=True):
-        reproducir_audio("https://www.soundjay.com/misc/sounds/bingo-ball-machine-1.mp3")
+# --- 8. EL MOMENTO DEL SORTEO (LÓGICA DE EXTRACCIÓN ÚNICA) ---
+if len(amigos_dict) > 0:
+    # FILTRO DE EXTRACCIÓN ÚNICA
+    ganadores_previos = [item['num'] for item in st.session_state.historial]
+    participantes_disponibles = [n for n in amigos_dict.keys() if n not in ganadores_previos]
+
+    if not participantes_disponibles:
+        st.info("🎊 ¡Todos los participantes registrados ya ganaron! Reinicia el historial para una nueva ronda.")
+    else:
+        st.subheader(f"🎲 ¡Inicia el Chocolateo! ({len(participantes_disponibles)} bolillas en juego)")
         
-        espacio_gif = st.empty()
-        espacio_numero = st.empty()
-        
-        espacio_gif.image("https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUyZThwb2FvMm94ZHl4MWl0YjZpODIwOW1yNGV0dTM4c2oybzNsbXNmNSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/4RaPld0hPNRXEk1cfv/200w.gif")
-        
-        lista_participantes = list(st.session_state.amigos.keys())
-        for i in range(35):
-            n_azar = random.choice(lista_participantes)
-            color_text = "#f1c40f" if i > 25 else "#ffffff"
-            espacio_numero.markdown(f"<h1 style='text-align:center; font-size:100px; color:{color_text};'>🎲 {n_azar}</h1>", unsafe_allow_html=True)
-            time.sleep(0.06 + (i/300)) 
-        
-        ganador_final = random.choice(lista_participantes)
-        nombre_ganador = st.session_state.amigos[ganador_final]
-        
-        st.session_state.historial.append({"num": ganador_final, "nom": nombre_ganador})
-        
-        espacio_gif.empty()
-        reproducir_audio("https://www.myinstants.com/media/sounds/drum-roll-sound-effect.mp3")
-        st.balloons()
-        
-        espacio_numero.markdown(f"""
-            <div class="celebracion-ganador">
-                <img src="https://media2.giphy.com/media/v1.Y2lkPTZjMDliOTUyZThwb2FvMm94ZHl4MWl0YjZpODIwOW1yNGV0dTM4c2oybzNsbXNmNSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/kfRlTZDvhLCPvOEey8/200w.gif" width="180">
-                <h1 style='font-size: 55px;'>🎉 ¡NÚMERO {ganador_final}! 🎉</h1>
-                <hr style='border-color: rgba(255,255,255,0.2);'>
-                <h2 style='font-size: 35px;'>Felicidades, <b>{nombre_ganador}</b>!</h2>
-                <p style='font-size: 18px;'>La suerte te acompaña hoy.</p>
-            </div>
-        """, unsafe_allow_html=True)
+        if st.button("🔥 ¡GIRAR TÓMBOLA AHORA!", use_container_width=True):
+            reproducir_audio("https://www.soundjay.com/misc/sounds/bingo-ball-machine-1.mp3")
+            
+            espacio_gif = st.empty()
+            espacio_numero = st.empty()
+            
+            espacio_gif.image("https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUyZThwb2FvMm94ZHl4MWl0YjZpODIwOW1yNGV0dTM4c2oybzNsbXNmNSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/4RaPld0hPNRXEk1cfv/200w.gif")
+            
+            # Chocolateo visual (usamos a todos para la emoción)
+            lista_para_animar = list(amigos_dict.keys())
+            for i in range(35):
+                n_azar = random.choice(lista_para_animar)
+                color_text = "#f1c40f" if i > 25 else "#ffffff"
+                espacio_numero.markdown(f"<h1 style='text-align:center; font-size:100px; color:{color_text};'>🎲 {n_azar}</h1>", unsafe_allow_html=True)
+                time.sleep(0.06 + (i/300)) 
+            
+            # GANADOR REAL (Solo de los que no han ganado)
+            ganador_final = random.choice(participantes_disponibles)
+            nombre_ganador = amigos_dict[ganador_final]
+            
+            st.session_state.historial.append({"num": ganador_final, "nom": nombre_ganador})
+            
+            espacio_gif.empty()
+            reproducir_audio("https://www.myinstants.com/media/sounds/drum-roll-sound-effect.mp3")
+            st.balloons()
+            
+            espacio_numero.markdown(f"""
+                <div class="celebracion-ganador">
+                    <img src="https://media2.giphy.com/media/v1.Y2lkPTZjMDliOTUyZThwb2FvMm94ZHl4MWl0YjZpODIwOW1yNGV0dTM4c2oybzNsbXNmNSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/kfRlTZDvhLCPvOEey8/200w.gif" width="180">
+                    <h1 style='font-size: 55px;'>🎉 ¡NÚMERO {ganador_final}! 🎉</h1>
+                    <hr style='border-color: rgba(255,255,255,0.2);'>
+                    <h2 style='font-size: 35px;'>Felicidades, <b>{nombre_ganador}</b>!</h2>
+                    <p style='font-size: 18px;'>La suerte te acompaña hoy. Este número sale de la tómbola.</p>
+                </div>
+            """, unsafe_allow_html=True)
 else:
     st.warning("⚠️ Necesitas registrar al menos a un amigo para habilitar el sorteo.")
 
-st.sidebar.caption("Neo Sorteo v4.0 | Callao 2026 | Desarrollado por Gerson")
+st.sidebar.caption("Neo Sorteo v4.5 | Callao 2026 | Cloud Persistence")
