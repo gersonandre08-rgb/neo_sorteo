@@ -5,7 +5,7 @@ import pandas as pd
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
-    page_title="Neo Sorteo: La Suerte del Callao",
+    page_title="Neo Sorteo: Tu número, tu historia, tu premio",
     page_icon="⚓",
     layout="wide"
 )
@@ -105,7 +105,7 @@ with st.sidebar:
         st.rerun()
 
 # --- CUERPO PRINCIPAL ---
-st.title("🎰 Neo Sorteo: ¡La Suerte del Callao!")
+st.title("🎰 Neo Sorteo: ¡Tu número, tu historia, tu premio!")
 st.write("Gestiona tus sorteos con estilo y transparencia.")
 
 # Sección 1: Visualización de Números Ocupados (Grilla 1-50)
@@ -153,4 +153,4 @@ else:
 
 # Pie de página
 st.markdown("---")
-st.caption("Neo Sorteo v2.5 | Callao 2026 | Desarrollado para Gerson")
+st.caption("Neo Sorteo v2.5 | Callao 2026 | Desarrollado por Gerson")
