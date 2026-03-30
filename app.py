@@ -54,14 +54,14 @@ st.markdown("""
         box-shadow: 0 0 15px rgba(241, 44, 60, 0.7) !important;
     }
     
-    /* Bolilla DISPONIBLE (Blanca Bingo) */
+    /* Bolilla DISPONIBLE (Blanca Bingo - TEXTO CORREGIDO PARA VISIBILIDAD) */
     div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
         background-color: #ffffff !important;
-        color: #1a233a !important;
+        color: #1a233a !important; /* Azul oscuro profundo para que el número sea legible */
         border: 2px solid #3498db !important;
     }
 
-    /* 2.5 Botones de Acción (Tipo Casino) */
+    /* 2.5 Botones de Acción y Sidebar (AJUSTE QUIRÚRGICO PARA TEXTO GUARDAR/BORRAR) */
     .stButton>button {
         width: 100%;
         background-color: #1d4ed8;
@@ -73,6 +73,21 @@ st.markdown("""
         font-weight: bold;
         transition: 0.3s;
     }
+
+    /* Ajuste específico para botones circulares en el Sidebar */
+    section[data-testid="stSidebar"] .stButton>button {
+        border-radius: 50% !important;
+        width: 85px !important; /* Aumentado para que quepa el texto */
+        height: 85px !important;
+        font-size: 0.75rem !important; /* Letra ajustada */
+        padding: 5px !important;
+        line-height: 1.1 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
     .stButton>button:hover {
         background-color: #2563eb;
         transform: translateY(-2px);
@@ -91,16 +106,17 @@ st.markdown("""
     .celebracion-ganador h1 { color: #f1c40f !important; margin: 0; font-size: 60px; }
     .celebracion-ganador h2 { color: white !important; margin: 10px 0; }
     
-    /* 2.7 CSS para posicionar el tercer GIF en la superior derecha (FIXED) */
+    /* 2.7 CSS PARA GIF SUPERIOR DERECHA (POSICIÓN Y TAMAÑO CORREGIDOS) */
     .gif-superior-derecha {
         position: fixed;
-        top: 60px;
-        right: 20px;
-        width: 110px;
+        top: 100px; /* Bajado para que no lo tape la franja blanca */
+        right: 30px;
+        width: 150px; /* Más grande como solicitaste */
+        height: auto;
         z-index: 1000;
-        border-radius: 10px;
-        box-shadow: 0 0 15px rgba(52, 152, 219, 0.6);
-        border: 1px solid #3498db;
+        border-radius: 15px;
+        box-shadow: 0 0 20px rgba(52, 152, 219, 0.6);
+        border: 2px solid #3498db;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -132,7 +148,10 @@ def reproducir_audio(url):
 
 # --- 5. SIDEBAR: PANEL DE CONTROL (GIF 1) ---
 with st.sidebar:
-    st.image("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHRkbWRqZ2ZueWZueWZueWZueWZueWZueWZueWZueWZueWZueZ/l41lTfuxV5N97S99e/giphy.gif", width=150)
+    # --- CAMBIO DE GIF DEL PANEL DE CONTROL ---
+    # Para cambiar este GIF, simplemente reemplaza la URL de abajo.
+    st.image("https://media.tenor.com/o8bWC-23Vy4AAAAM/bingo.gif", width=180)
+    
     st.title("⚓ Panel de Control")
     st.markdown("---")
 
@@ -148,7 +167,8 @@ with st.sidebar:
         
         c1, c2 = st.columns(2)
         with c1:
-            if st.form_submit_button("✅ Guardar"):
+            # Botón Guardar circular con salto de línea para ajuste
+            if st.form_submit_button("✅\nGUARDAR"):
                 if nombre_input:
                     if not n_edit and numero_input in st.session_state.amigos:
                         st.error("⚠️ El número ya está ocupado.")
@@ -160,7 +180,8 @@ with st.sidebar:
         
         with c2:
             if n_edit: 
-                if st.form_submit_button("🗑️ Eliminar"):
+                # Botón Borrar circular con salto de línea para ajuste
+                if st.form_submit_button("🗑️\nBORRAR"):
                     eliminar_amigo(n_edit)
                     st.rerun()
 
@@ -178,7 +199,7 @@ with st.sidebar:
         st.session_state.editando_num = None
         st.rerun()
 
-# --- 6. PANEL PRINCIPAL (GIF 3 SUPERIOR DERECHA) ---
+# --- 6. PANEL PRINCIPAL (GIF 3 SUPERIOR DERECHA AJUSTADO) ---
 st.markdown("""
     <img src="https://media.tenor.com/ctw2cS4i4CEAAAAM/lotto-lotto-balls.gif" class="gif-superior-derecha">
     """, unsafe_allow_html=True)
