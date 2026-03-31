@@ -14,7 +14,7 @@ st.set_page_config(
 
 # --- 2. CONEXIÓN A GOOGLE SHEETS (PERSISTENCIA TOTAL) ---
 # Se requiere configurar el link del Excel en los secrets de Streamlit
-conn = st.connection("gsheets", type=GSheetsConnection, spreadsheet="https://docs.google.com/spreadsheets/d/1V8aT4NRi-smcmUkLtBF72vgxpTUVzzZyiDO-bLXA4UA/edit", ttl=0)
+conn = st.connection("gsheets", type=GSheetsConnection, ttl=0)
 
 def leer_datos():
     try:
